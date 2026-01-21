@@ -63,21 +63,25 @@ def retrieve(query: str, k: int | None = None) -> List[Document]:
     retriever = get_retriever(k=k)
     return retriever.invoke(query)
 
-def index_documents(file_path: Path) -> int:
-    """Index a list of Document objects into the Pinecone vector store.
+def index_documents(docs: List[Document]) -> int:
+    """Index Document objects into the Pinecone vector store.
 
     Args:
-        docs: Documents to embed and upsert into the vector index.
+        docs: Loaded LangChain Document objects.
 
     Returns:
-        The number of documents indexed.
+        Number of chunks indexed.
     """
-    loader = PyPDFLoader(str(file_path), mode="single")
-    docs = loader.load()
+    if not docs:
+        return 0
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=50
+    )
     texts = text_splitter.split_documents(docs)
 
     vector_store = _get_vector_store()
     vector_store.add_documents(texts)
+
     return len(texts)

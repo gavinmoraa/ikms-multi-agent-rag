@@ -48,29 +48,31 @@ verification_agent = create_agent(
 
 
 def retrieval_node(state: QAState) -> QAState:
-    """Retrieval Agent node: gathers context from vector store.
-
-    This node:
-    - Sends the user's question to the Retrieval Agent.
-    - The agent uses the attached retrieval tool to fetch document chunks.
-    - Extracts the tool's content (CONTEXT string) from the ToolMessage.
-    - Stores the consolidated context string in `state["context"]`.
-    """
+    """Retrieval Agent node: gathers context and citations from vector store."""
     question = state["question"]
 
-    result = retrieval_agent.invoke({"messages": [HumanMessage(content=question)]})
+    result = retrieval_agent.invoke(
+        {"messages": [HumanMessage(content=question)]}
+    )
 
     messages = result.get("messages", [])
     context = ""
+    citations = None
 
-    # Prefer the last ToolMessage content (from retrieval_tool)
+    # Prefer the last ToolMessage
     for msg in reversed(messages):
         if isinstance(msg, ToolMessage):
             context = str(msg.content)
+
+            # Extract citations from artifact
+            artifact = msg.artifact or {}
+            citations = artifact.get("citations")
+
             break
 
     return {
         "context": context,
+        "citations": citations,
     }
 
 

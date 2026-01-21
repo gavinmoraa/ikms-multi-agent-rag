@@ -20,4 +20,5 @@ class QAResponse(BaseModel):
     """
 
     answer: str
-    context: str
+    context: str | None
+    citations: dict[str, dict] | None

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
-
+from fastapi.middleware.cors import CORSMiddleware
 from .models import QuestionRequest, QAResponse
 from .services.qa_service import answer_question
 from .services.indexing_service import index_pdf_file
@@ -18,6 +18,13 @@ app = FastAPI(
     version="0.1.0",
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for assignment/demo
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(
@@ -66,6 +73,7 @@ async def qa_endpoint(payload: QuestionRequest) -> QAResponse:
     return QAResponse(
         answer=result.get("answer", ""),
         context=result.get("context", ""),
+        citations=result.get("citations"),
     )
 
 

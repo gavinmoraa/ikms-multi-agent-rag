@@ -3,7 +3,8 @@
 from langchain_core.tools import tool
 
 from ..retrieval.vector_store import retrieve
-from ..retrieval.serialization import serialize_chunks
+from ..retrieval.serialization import serialize_chunks_with_ids
+
 
 
 @tool(response_format="content_and_artifact")
@@ -26,9 +27,12 @@ def retrieval_tool(query: str):
     # Retrieve documents from vector store
     docs = retrieve(query, k=4)
 
-    # Serialize chunks into formatted string (content)
-    context = serialize_chunks(docs)
+    # Serialize chunks with stable IDs and citations
+    context, citations = serialize_chunks_with_ids(docs)
 
-    # Return tuple: (serialized content, artifact documents)
-    # This follows LangChain's content_and_artifact response format
-    return context, docs
+    # Return context as content and include citations in artifact
+    return context, {
+        "docs": docs,
+        "citations": citations,
+    }
+

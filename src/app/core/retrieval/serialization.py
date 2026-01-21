@@ -34,3 +34,43 @@ def serialize_chunks(docs: List[Document]) -> str:
         context_parts.append(f"{chunk_header}\n{chunk_content}")
 
     return "\n\n".join(context_parts)
+
+
+
+def serialize_chunks_with_ids(
+    docs: List[Document],
+) -> tuple[str, dict]:
+    """
+    Serialize documents into a context string with stable chunk IDs
+    and a citation map for evidence-aware answers.
+
+    Returns:
+        context (str): Formatted context with chunk IDs like [C1]
+        citations (dict): Chunk ID -> metadata mapping
+    """
+    context_parts = []
+    citations = {}
+
+    for idx, doc in enumerate(docs, start=1):
+        chunk_id = f"C{idx}"
+
+        page_num = doc.metadata.get("page") or doc.metadata.get(
+            "page_number", "unknown"
+        )
+        source = doc.metadata.get("source", "unknown")
+
+        chunk_content = doc.page_content.strip()
+
+        # Context formatting with stable ID
+        context_parts.append(
+            f"[{chunk_id}] Chunk from page {page_num}:\n{chunk_content}"
+        )
+
+        # Citation metadata
+        citations[chunk_id] = {
+            "page": page_num,
+            "source": source,
+            "snippet": chunk_content[:100] + "..."
+        }
+
+    return "\n\n".join(context_parts), citations
