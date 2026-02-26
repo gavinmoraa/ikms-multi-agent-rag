@@ -8,7 +8,6 @@ from .models import QuestionRequest, QAResponse
 from .services.qa_service import answer_question
 from .services.indexing_service import index_pdf_file
 
-
 _CITATION_TOKEN_RE = re.compile(r"\[\s*c\s*(\d+)\s*\]", re.IGNORECASE)
 
 
@@ -44,7 +43,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for assignment/demo
+    allow_origins=[
+        "https://ikms-multi-agent-lxcoxjm9x-gavin-moragodas-projects.vercel.app",
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
