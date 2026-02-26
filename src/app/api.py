@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import JSONResponse
@@ -6,6 +7,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from .models import QuestionRequest, QAResponse
 from .services.qa_service import answer_question
 from .services.indexing_service import index_pdf_file
+
+
+_CITATION_TOKEN_RE = re.compile(r"\[\s*c\s*(\d+)\s*\]", re.IGNORECASE)
+
+
+def _normalize_answer_citations(answer: str) -> str:
+    if not answer:
+        return answer
+    return _CITATION_TOKEN_RE.sub(lambda m: f"[C{m.group(1)}]", answer)
+
+
+def _normalize_citation_map(citations: dict | None) -> dict | None:
+    if not isinstance(citations, dict):
+        return citations
+
+    normalized: dict[str, dict] = {}
+    for raw_key, value in citations.items():
+        key_str = str(raw_key)
+        match = re.match(r"^c(\d+)$", key_str, flags=re.IGNORECASE)
+        key = f"C{match.group(1)}" if match else key_str
+        normalized[key] = value
+
+    return normalized
 
 
 app = FastAPI(
@@ -25,6 +49,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/", status_code=status.HTTP_200_OK)
+async def root() -> dict:
+    """Basic health/info route for quick browser checks."""
+
+    return {
+        "status": "ok",
+        "message": "IKMS Multi-Agent RAG API is running.",
+        "docs": "/docs",
+    }
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(
@@ -70,10 +105,13 @@ async def qa_endpoint(payload: QuestionRequest) -> QAResponse:
     # Delegate to the service layer which runs the multi-agent QA graph
     result = answer_question(question)
 
+    normalized_answer = _normalize_answer_citations(result.get("answer", ""))
+    normalized_citations = _normalize_citation_map(result.get("citations"))
+
     return QAResponse(
-        answer=result.get("answer", ""),
+        answer=normalized_answer,
         context=result.get("context", ""),
-        citations=result.get("citations"),
+        citations=normalized_citations,
     )
 
 

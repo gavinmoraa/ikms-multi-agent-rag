@@ -23,6 +23,8 @@ CRITICAL INSTRUCTIONS (MUST FOLLOW):
 - You MUST cite sources using the chunk IDs provided in the context.
 - Use citation format: [C1], [C2], etc.
 - Place citations immediately after the sentence they support.
+- Every factual sentence must include at least one citation.
+- If the answer contains multiple factual claims/sentences, use multiple citations across the answer when supported.
 - ONLY cite chunk IDs that actually appear in the context.
 - NEVER invent or guess citations.
 
@@ -43,6 +45,11 @@ Instructions:
 - Verify every claim against the provided context.
 - Ensure all citations [C1], [C2], etc. correspond to actual chunks in context.
 - Remove citations if the supporting content is removed.
+- Preserve valid citation markers from the draft answer whenever possible.
+- Citation format in the final answer MUST be uppercase: [C1], [C2], etc.
+- Do NOT return an uncited factual answer when supporting chunks exist.
+- Ensure each factual sentence has at least one citation.
+- If multiple factual claims are present, keep citations distributed across claims instead of a single citation at the end.
 - Do NOT add new citations unless directly supported by the context.
 - Return ONLY the final, corrected answer text.
 """

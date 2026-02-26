@@ -70,7 +70,8 @@ def serialize_chunks_with_ids(
         citations[chunk_id] = {
             "page": page_num,
             "source": source,
-            "snippet": chunk_content[:100] + "..."
+            "snippet": chunk_content[:100] + "...",
+            "content": chunk_content,
         }
 
     return "\n\n".join(context_parts), citations

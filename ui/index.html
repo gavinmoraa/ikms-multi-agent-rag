@@ -2,104 +2,812 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Multi-Agent RAG – Evidence Aware QA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Evidence-Aware QA | Multi-Agent RAG</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background: #f9f9f9;
-    }
-    textarea {
-      width: 100%;
-      height: 80px;
-      padding: 10px;
-      font-size: 14px;
-    }
-    button {
-      margin-top: 10px;
-      padding: 10px 20px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-    .box {
-      background: #fff;
-      padding: 20px;
-      margin-top: 20px;
-      border-radius: 6px;
-    }
-    .citation {
-      font-size: 13px;
-      margin-bottom: 6px;
-    }
-    .badge {
-      font-weight: bold;
-      color: #1a73e8;
-    }
-    .notice {
-    color: #b00020;            /* deep red */
-    background: #fdecea;       /* light red background */
-    border: 1px solid #f5c2c7;
-    padding: 10px 14px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-    font-size: 14px;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
     }
 
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      padding: 28px 40px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+    .header p {
+      font-size: 13px;
+      color: #a8b2d1;
+      margin-top: 4px;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 32px 48px;
+    }
+
+    /* ── Notice ── */
+    .notice {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-left: 4px solid #e6a800;
+      color: #664d03;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+    .notice strong { color: #553c00; }
+
+    /* ── Input Area ── */
+    .input-section {
+      background: #fff;
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      margin-bottom: 24px;
+    }
+    .input-section label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #5a5a7a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .input-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .upload-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .file-input {
+      flex: 1;
+      min-width: 260px;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: #fff;
+      color: #2c2c3e;
+      outline: none;
+    }
+    .file-input:focus { border-color: #0f3460; }
+    .upload-status {
+      margin-bottom: 14px;
+      font-size: 13px;
+      color: #555;
+      min-height: 18px;
+    }
+    .upload-status.success { color: #166534; }
+    .upload-status.error { color: #b00020; }
+    textarea {
+      flex: 1;
+      height: 56px;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-family: inherit;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      resize: vertical;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+    textarea:focus { border-color: #0f3460; }
+    .btn-ask {
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      background: linear-gradient(135deg, #0f3460, #1a1a2e);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn-ask:hover { opacity: 0.9; }
+    .btn-ask:active { transform: scale(0.97); }
+    .btn-ask:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ── Results Grid ── */
+    .results {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 24px;
+    }
+    @media (max-width: 860px) {
+      .results { grid-template-columns: 1fr; }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .answer-card {
+      overflow: visible;
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      border-bottom: 1px solid #eee;
+    }
+    .card-header h2 {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #5a5a7a;
+    }
+    .card-body {
+      padding: 20px;
+    }
+
+    /* ── Answer ── */
+    #answer {
+      font-size: 15px;
+      line-height: 1.75;
+      color: #2c2c3e;
+      white-space: pre-wrap;
+    }
+    #answer.placeholder { color: #999; }
+
+    /* ── Citation badges in answer ── */
+    .cite-link {
+      display: inline-block;
+      background: #e8f0fe;
+      color: #1a56db;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 1px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      position: relative;
+      text-decoration: none;
+      vertical-align: middle;
+    }
+    .cite-link:hover {
+      background: #1a56db;
+      color: #fff;
+    }
+
+    /* ── Tooltip ── */
+    .tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(290px, calc(100vw - 32px));
+      max-width: calc(100vw - 32px);
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.55;
+      padding: 10px 14px;
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      z-index: 100;
+      pointer-events: none;
+    }
+    .tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #1a1a2e;
+    }
+    .cite-link:hover .tooltip { display: block; }
+
+    /* ── Source Panel ── */
+    .source-panel {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .source-panel::-webkit-scrollbar { width: 5px; }
+    .source-panel::-webkit-scrollbar-thumb {
+      background: #c0c0c0;
+      border-radius: 3px;
+    }
+    .chunk-card {
+      border: 1px solid #eaeaea;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      transition: border-color 0.25s, box-shadow 0.25s, background-color 0.3s;
+      position: relative;
+    }
+    .chunk-card:last-child { margin-bottom: 0; }
+    .chunk-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .chunk-id {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1a56db;
+      background: #e8f0fe;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .chunk-meta {
+      font-size: 11px;
+      color: #888;
+    }
+    .heatmap-count {
+      font-size: 11px;
+      font-weight: 600;
+      color: #fff;
+      background: #1a56db;
+      padding: 1px 7px;
+      border-radius: 10px;
+      margin-left: 6px;
+    }
+    .chunk-text {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #444;
+      max-height: 120px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .chunk-text::-webkit-scrollbar { width: 3px; }
+    .chunk-text::-webkit-scrollbar-thumb {
+      background: #d0d0d0;
+      border-radius: 2px;
+    }
+
+    /* ── Highlight animation ── */
+    .chunk-card.highlight {
+      border-color: #f59e0b;
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.25);
+      animation: flashHighlight 1.5s ease-out;
+    }
+    @keyframes flashHighlight {
+      0%   { background: #fef3c7; }
+      100% { background: transparent; }
+    }
+
+    /* ── Fact-Check Mode ── */
+    .btn-factcheck {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 14px;
+      border-radius: 20px;
+      border: 2px solid #0f3460;
+      background: transparent;
+      color: #0f3460;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .btn-factcheck:hover {
+      background: #0f3460;
+      color: #fff;
+    }
+    .btn-factcheck.active {
+      background: #0f3460;
+      color: #fff;
+    }
+    .sentence {
+      cursor: pointer;
+      padding: 1px 2px;
+      border-radius: 3px;
+      transition: background 0.15s;
+    }
+    .sentence:hover { background: #e8f0fe; }
+    .sentence.active { background: #dbeafe; }
+    .sentence.no-citation {
+      border-bottom: 2px dashed #f59e0b;
+    }
+
+    /* ── Loading spinner ── */
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #888;
+      font-size: 14px;
+    }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 3px solid #e0e0e0;
+      border-top-color: #0f3460;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Empty state ── */
+    .empty { color: #aaa; font-size: 14px; }
   </style>
 </head>
 <body>
 
-<div class="notice">
-  <strong>Note:</strong> I was unable to deploy the backend on Render or Railway due to
-  card and GitHub account limitations. To use this interface, please run the backend
-  locally.
+<div class="header">
+  <h1>Multi Agent RAG & Evidence Aware QA</h1>
+  <p>Ask questions about indexed PDFs. Answers are grounded in retrieved evidence with verifiable citations.</p>
 </div>
- 
 
-  <h2>📄 Multi-Agent RAG – Evidence-Aware QA</h2>
+<div class="container">
 
-  <textarea id="question" placeholder="Ask a question about the indexed PDF..."></textarea>
-  <br />
-  <button onclick="ask()">Ask Question</button>
-
-  <div class="box">
-    <h3>Answer</h3>
-    <p id="answer">—</p>
+  <div class="notice">
+    <strong>Backend status:</strong>
+    <span id="backendNoticeText">Checking connection...</span>
   </div>
 
-  <div class="box">
-    <h3>Sources</h3>
-    <div id="citations">—</div>
+  <div class="input-section">
+    <label for="pdfFile">Index PDF</label>
+    <div class="upload-row">
+      <input id="pdfFile" class="file-input" type="file" accept=".pdf,application/pdf" />
+      <button class="btn-ask" id="uploadBtn" onclick="uploadPdf()">Upload &amp; Index</button>
+    </div>
+    <div id="uploadStatus" class="upload-status"></div>
+
+    <label for="question">Your Question</label>
+    <div class="input-row">
+      <textarea id="question" placeholder="Ask a question about the indexed PDF..."></textarea>
+      <button class="btn-ask" id="askBtn" onclick="ask()">Ask</button>
+    </div>
   </div>
 
-  <script>
-    async function ask() {
-      const question = document.getElementById("question").value;
-      document.getElementById("answer").innerText = "Loading...";
-      document.getElementById("citations").innerHTML = "";
+  <div class="results">
+    <!-- Left: Answer -->
+    <div class="card answer-card">
+      <div class="card-header">
+        <h2>Answer</h2>
+        <button class="btn-factcheck" id="factcheckBtn" onclick="toggleFactCheck()" title="Click sentences to see their evidence">Fact-Check</button>
+      </div>
+      <div class="card-body">
+        <div id="answer" class="placeholder">Ask a question to get started.</div>
+      </div>
+    </div>
 
-      const res = await fetch("http://127.0.0.1:8000/qa", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question })
+    <!-- Right: Source Panel -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Sources</h2>
+        <span id="sourceCount" class="chunk-meta"></span>
+      </div>
+      <div class="card-body source-panel" id="sourcePanel">
+        <div class="empty">Sources will appear here.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── State ──
+  let currentCitations = {};
+  let currentAnswer = '';
+  let factCheckActive = false;
+  let citationDisplayMap = {};
+  const API_BASE = resolveApiBase();
+  const CITATION_TOKEN_RE = /\[\s*c\s*(\d+)\s*\]/gi;
+
+  // ── Main ask function ──
+  async function ask() {
+    const q = document.getElementById('question').value.trim();
+    if (!q) return;
+
+    const btn = document.getElementById('askBtn');
+    btn.disabled = true;
+
+    // Reset fact-check
+    if (factCheckActive) toggleFactCheck();
+
+    // Loading state
+    document.getElementById('answer').innerHTML = '<div class="loading"><div class="spinner"></div>Thinking...</div>';
+    document.getElementById('answer').classList.remove('placeholder');
+    document.getElementById('sourcePanel').innerHTML = '<div class="loading"><div class="spinner"></div>Retrieving sources...</div>';
+    document.getElementById('sourceCount').textContent = '';
+
+    try {
+      const res = await fetch(`${API_BASE}/qa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q })
       });
 
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Request failed (${res.status})`);
+      }
+
       const data = await res.json();
+      currentCitations = normalizeCitationsMap(data.citations || {});
+      currentAnswer = normalizeCitationTokens(data.answer || '');
+      currentAnswer = withCitationFallback(currentAnswer, currentCitations);
 
-      document.getElementById("answer").innerText = data.answer;
+      const citeCounts = countCitations(currentAnswer);
+      citationDisplayMap = buildCitationDisplayMap(currentCitations, citeCounts);
+      renderAnswer(currentAnswer, currentCitations);
+      renderSourcePanel(currentCitations, citeCounts);
+    } catch (e) {
+      document.getElementById('answer').innerHTML = `<span style="color:#b00020">Error: ${escapeHtml(e.message)}</span>`;
+      document.getElementById('sourcePanel').innerHTML = '';
+    } finally {
+      btn.disabled = false;
+    }
+  }
 
-      if (data.citations && Object.keys(data.citations).length > 0) {
-        for (const [id, cite] of Object.entries(data.citations)) {
-          const div = document.createElement("div");
-          div.className = "citation";
-          div.innerHTML = `<span class="badge">[${id}]</span> Page ${cite.page} – ${cite.source}`;
-          document.getElementById("citations").appendChild(div);
-        }
-      } else {
-        document.getElementById("citations").innerText = "No citations found.";
+  async function uploadPdf() {
+    const fileInput = document.getElementById('pdfFile');
+    const statusEl = document.getElementById('uploadStatus');
+    const btn = document.getElementById('uploadBtn');
+    const file = fileInput.files && fileInput.files[0];
+
+    statusEl.className = 'upload-status';
+
+    if (!file) {
+      statusEl.classList.add('error');
+      statusEl.textContent = 'Please choose a PDF file first.';
+      return;
+    }
+
+    if (file.type && file.type !== 'application/pdf') {
+      statusEl.classList.add('error');
+      statusEl.textContent = 'Only PDF files are supported.';
+      return;
+    }
+
+    btn.disabled = true;
+    statusEl.textContent = 'Uploading and indexing PDF...';
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(`${API_BASE}/index-pdf`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Upload failed (${res.status})`);
+      }
+
+      const data = await res.json();
+      const chunks = Number(data.chunks_indexed || 0);
+      statusEl.classList.add('success');
+      statusEl.textContent = `Indexed ${escapeHtml(data.filename || file.name)} successfully (${chunks} chunks). You can ask questions now.`;
+      fileInput.value = '';
+    } catch (e) {
+      statusEl.classList.add('error');
+      statusEl.textContent = `Upload error: ${e.message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── Count [Cx] occurrences in answer ──
+  function countCitations(text) {
+    const counts = {};
+    const re = /\[\s*c\s*(\d+)\s*\]/gi;
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      const id = 'C' + m[1];
+      counts[id] = (counts[id] || 0) + 1;
+    }
+    return counts;
+  }
+
+  // ── Render answer with clickable citation badges + tooltips ──
+  function renderAnswer(text, citations) {
+    const el = document.getElementById('answer');
+    // Replace [Cx] with clickable spans
+    const html = escapeHtml(text).replace(/\[\s*c\s*(\d+)\s*\]/gi, (match, num) => {
+      const id = 'C' + num;
+      const displayId = getDisplayCitationId(id);
+      const cite = citations[id];
+      const snippet = cite ? escapeHtml(cite.snippet) : 'Source not found';
+      const page = cite ? cite.page : '?';
+      return `<span class="cite-link" data-cite="${id}" onclick="highlightChunk('${id}')">[${displayId}]<span class="tooltip"><strong>[${displayId}]</strong> Page ${page}<br>${snippet}</span></span>`;
+    });
+    el.innerHTML = html;
+  }
+
+  // ── Render source panel with heatmap coloring ──
+  function renderSourcePanel(citations, citeCounts) {
+    const panel = document.getElementById('sourcePanel');
+    const ids = Object.keys(citations);
+    const citedIds = ids.filter(id => (citeCounts[id] || 0) > 0);
+    const visibleIds = citedIds.length > 0 ? citedIds : ids;
+
+    if (ids.length === 0) {
+      panel.innerHTML = '<div class="empty">No sources found.</div>';
+      document.getElementById('sourceCount').textContent = '';
+      return;
+    }
+
+    document.getElementById('sourceCount').textContent = visibleIds.length + ' cited chunk' + (visibleIds.length > 1 ? 's' : '');
+
+    // Find max count for heatmap scaling
+    const maxCount = Math.max(1, ...visibleIds.map(id => citeCounts[id] || 0));
+
+    let html = '';
+    for (const id of visibleIds) {
+      const cite = citations[id];
+      const displayId = getDisplayCitationId(id);
+      const count = citeCounts[id] || 0;
+      const intensity = count / maxCount; // 0..1
+      // Heatmap: blue tint based on usage
+      const bg = count > 0
+        ? `rgba(26, 86, 219, ${0.04 + intensity * 0.1})`
+        : 'transparent';
+      const border = count > 0
+        ? `rgba(26, 86, 219, ${0.15 + intensity * 0.35})`
+        : '#eaeaea';
+
+      html += `
+        <div class="chunk-card" id="chunk-${id}" style="background:${bg}; border-color:${border}">
+          <div class="chunk-card-header">
+            <span>
+              <span class="chunk-id">${displayId}</span>
+              ${count > 0 ? `<span class="heatmap-count">${count}x cited</span>` : ''}
+            </span>
+            <span class="chunk-meta">Page ${cite.page} &mdash; ${escapeHtml(shortSource(cite.source))}</span>
+          </div>
+          <div class="chunk-text">${escapeHtml(cite.content || cite.snippet)}</div>
+        </div>`;
+    }
+    panel.innerHTML = html;
+  }
+
+  // ── Highlight a chunk card ──
+  function highlightChunk(id) {
+    // Remove previous highlights
+    document.querySelectorAll('.chunk-card.highlight').forEach(el => el.classList.remove('highlight'));
+
+    const card = document.getElementById('chunk-' + id);
+    if (!card) return;
+
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Force re-trigger animation
+    card.classList.remove('highlight');
+    void card.offsetWidth;
+    card.classList.add('highlight');
+  }
+
+  // ── Highlight multiple chunks (for fact-check) ──
+  function highlightChunks(ids) {
+    document.querySelectorAll('.chunk-card.highlight').forEach(el => el.classList.remove('highlight'));
+
+    for (const id of ids) {
+      const card = document.getElementById('chunk-' + id);
+      if (card) {
+        card.classList.remove('highlight');
+        void card.offsetWidth;
+        card.classList.add('highlight');
       }
     }
-  </script>
+    // Scroll to first
+    if (ids.length > 0) {
+      const first = document.getElementById('chunk-' + ids[0]);
+      if (first) first.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+
+  // ── Fact-Check Mode ──
+  function toggleFactCheck() {
+    factCheckActive = !factCheckActive;
+    const btn = document.getElementById('factcheckBtn');
+    btn.classList.toggle('active', factCheckActive);
+
+    if (!currentAnswer) return;
+
+    if (factCheckActive) {
+      renderFactCheckSentences(currentAnswer, currentCitations);
+    } else {
+      // Restore normal answer
+      renderAnswer(currentAnswer, currentCitations);
+      // Clear highlights
+      document.querySelectorAll('.chunk-card.highlight').forEach(el => el.classList.remove('highlight'));
+    }
+  }
+
+  function renderFactCheckSentences(text, citations) {
+    const el = document.getElementById('answer');
+
+    // Split into sentences (handle abbreviations roughly)
+    const sentences = text.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g) || [text];
+
+    let html = '';
+    for (let i = 0; i < sentences.length; i++) {
+      const raw = sentences[i];
+      const refs = [];
+      const refRe = /\[\s*c\s*(\d+)\s*\]/gi;
+      let m;
+      while ((m = refRe.exec(raw)) !== null) {
+        refs.push('C' + m[1]);
+      }
+
+      const noCite = refs.length === 0 ? ' no-citation' : '';
+      // Render sentence with citation badges inside
+      const inner = escapeHtml(raw).replace(/\[\s*c\s*(\d+)\s*\]/gi, (match, num) => {
+        const id = 'C' + num;
+        const displayId = getDisplayCitationId(id);
+        const cite = citations[id];
+        const snippet = cite ? escapeHtml(cite.snippet) : 'Source not found';
+        const page = cite ? cite.page : '?';
+        return `<span class="cite-link" data-cite="${id}" onclick="event.stopPropagation(); highlightChunk('${id}')">[${displayId}]<span class="tooltip"><strong>[${displayId}]</strong> Page ${page}<br>${snippet}</span></span>`;
+      });
+
+      const refsJson = escapeHtml(JSON.stringify(refs));
+      html += `<span class="sentence${noCite}" data-refs='${refsJson}' onclick="onSentenceClick(this, event)">${inner}</span>`;
+    }
+    el.innerHTML = html;
+  }
+
+  function onSentenceClick(span, event) {
+    // Deselect all sentences
+    document.querySelectorAll('.sentence.active').forEach(s => s.classList.remove('active'));
+    span.classList.add('active');
+
+    const refs = JSON.parse(span.getAttribute('data-refs'));
+    if (refs.length > 0) {
+      highlightChunks(refs);
+    } else {
+      // Clear highlights if no citations
+      document.querySelectorAll('.chunk-card.highlight').forEach(el => el.classList.remove('highlight'));
+    }
+  }
+
+  // ── Utilities ──
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function shortSource(src) {
+    if (!src) return 'unknown';
+    // Show only filename from path
+    const parts = src.replace(/\\/g, '/').split('/');
+    return parts[parts.length - 1];
+  }
+
+  function normalizeCitationTokens(text) {
+    if (!text) return text;
+    return text.replace(CITATION_TOKEN_RE, (match, num) => `[C${num}]`);
+  }
+
+  function normalizeCitationsMap(citations) {
+    const normalized = {};
+    if (!citations || typeof citations !== 'object') return normalized;
+
+    for (const [rawKey, value] of Object.entries(citations)) {
+      const m = String(rawKey).match(/^c(\d+)$/i);
+      const key = m ? `C${m[1]}` : String(rawKey);
+      normalized[key] = value;
+    }
+
+    return normalized;
+  }
+
+  function withCitationFallback(answerText, citations) {
+    const text = normalizeCitationTokens(answerText || '');
+    const hasCitations = /\[C\d+\]/.test(text);
+    if (hasCitations) return text;
+
+    const ids = Object.keys(citations || {}).sort((a, b) => {
+      const ai = Number((a.match(/\d+/) || [0])[0]);
+      const bi = Number((b.match(/\d+/) || [0])[0]);
+      return ai - bi;
+    });
+
+    if (ids.length === 0) return text;
+    return `${text}\n\nSources: ${ids.map(id => `[${id}]`).join(' ')}`.trim();
+  }
+
+  function buildCitationDisplayMap(citations, citeCounts) {
+    const ids = Object.keys(citations || {});
+    const citedIds = ids.filter(id => (citeCounts[id] || 0) > 0);
+
+    if (citedIds.length === 0) {
+      return {};
+    }
+
+    const sorted = [...citedIds].sort((a, b) => {
+      const ai = Number((a.match(/\d+/) || [0])[0]);
+      const bi = Number((b.match(/\d+/) || [0])[0]);
+      return ai - bi;
+    });
+
+    const map = {};
+    for (let i = 0; i < sorted.length; i++) {
+      map[sorted[i]] = `C${i + 1}`;
+    }
+    return map;
+  }
+
+  function getDisplayCitationId(originalId) {
+    return citationDisplayMap[originalId] || originalId;
+  }
+
+  function resolveApiBase() {
+    const params = new URLSearchParams(window.location.search);
+    const fromQuery = params.get('apiBase');
+    if (fromQuery) return fromQuery.replace(/\/$/, '');
+
+    if (window.IKMS_API_BASE) {
+      return String(window.IKMS_API_BASE).replace(/\/$/, '');
+    }
+
+    if (window.location.protocol === 'file:') {
+      return 'http://127.0.0.1:8000';
+    }
+
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://127.0.0.1:8000';
+    }
+
+    return window.location.origin.replace(/\/$/, '');
+  }
+
+  async function updateBackendStatus() {
+    const note = document.getElementById('backendNoticeText');
+
+    try {
+      const res = await fetch(`${API_BASE}/openapi.json`, { method: 'GET' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      note.innerHTML = `Connected to <strong>${escapeHtml(API_BASE)}</strong>`;
+    } catch {
+      note.innerHTML = `Cannot reach backend at <strong>${escapeHtml(API_BASE)}</strong>. Start backend with <code>uvicorn src.app.api:app --reload</code> or open this page with <code>?apiBase=http://127.0.0.1:8000</code>.`;
+    }
+  }
+
+  // ── Enter key to submit ──
+  document.getElementById('question').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      ask();
+    }
+  });
+
+  updateBackendStatus();
+</script>
 
 </body>
 </html>
