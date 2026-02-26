@@ -420,6 +420,7 @@
   let currentAnswer = '';
   let factCheckActive = false;
   let citationDisplayMap = {};
+  const DEFAULT_RENDER_API_BASE = 'https://ikms-multi-agent-rag-j2tv.onrender.com';
   const API_BASE = resolveApiBase();
   const CITATION_TOKEN_RE = /\[\s*c\s*(\d+)\s*\]/gi;
 
@@ -780,6 +781,10 @@
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
       return 'http://127.0.0.1:8000';
+    }
+
+    if (host.endsWith('.vercel.app')) {
+      return DEFAULT_RENDER_API_BASE;
     }
 
     return window.location.origin.replace(/\/$/, '');
